@@ -20,7 +20,7 @@
 %% Key Data structures
 %% 
 %% --------------------------------------------------------------------
--record(state,{service_list}).
+-record(state,{app_info,node_info,catalog_info}).
 
 
 %% --------------------------------------------------------------------
@@ -118,20 +118,34 @@ handle_call(Request, From, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% -------------------------------------------------------------------
 handle_cast({heart_beat,Interval}, State) ->
+    
     spawn(fun()->h_beat(Interval) end),    
     {noreply, State};
 
-handle_cast({update,ServiceList}, State) ->
-    NewState=State#state{service_list=ServiceList},
+handle_cast({update_info}, State) ->
+     NewNodeInfo=case rpc:call(node(),config,get_info,[?CONFIG_DIR,?NODECONFIG_FILE]) of
+		    {ok,NodeInfo}->
+			NodeInfo;
+		    _->
+			State#state.node_info
+		end,
+     NewCatalogInfo=case rpc:call(node(),config,get_info,[?CONFIG_DIR,?CATALOG_CONFIG_FILE]) of
+		    {ok,CatalogInfo}->
+			CatalogInfo;
+		    _->
+			State#state.catalog_info
+		end,
+     NewAppInfo=case rpc:call(node(),config,get_info,[?CONFIG_DIR,?APP_CONFIG_FILE]) of
+		    {ok,AppInfo}->
+			AppInfo;
+		    _->
+			State#state.app_info
+		end,
+    
+    NewState=State#state{node_info=NewNodeInfo,
+			 app_info=NewAppInfo,
+			 catalog_info=NewCatalogInfo},
     {noreply, NewState};
-
-handle_cast({add,_ServiceId,_Node}, State) ->
-
-    {noreply, State};
-
-handle_cast({delete,_ServiceId,_Node}, State) ->
- 
-    {noreply, State};
 
 
 handle_cast(Msg, State) ->
@@ -177,22 +191,9 @@ code_change(_OldVsn, State, _Extra) ->
 %% --------------------------------------------------------------------
 h_beat(Interval)->
 
+    ok=down_load_config(?CONFIG_URL,?CONFIG_DIR),
+    ok=rpc:cast(node(),config_service,update_info,[]),
     
-    % Update catalog.config and send to service X
-    config:update_info(?CATALOG_CONFIG_URL,?CATALOG_CONFIG_DIR,?CATALOG_CONFIG_FILE),
-    {ok,CatalogBinary}=file:read_file(?CATALOG_CONFIG_FILE),
-    InstancesOrchistrate=vm_service:get_instance("orchistrate_service"),
-    [rpc:call(Node,orchistrate_service,update_catalog,[?CATALOG_CONFIG_FILE,CatalogBinary],5000)||{_,Node}<-InstancesOrchistrate],
-    InstancesVm=vm_service:get_instance("vm_service"),
-    [rpc:call(Node,vm_service,update_catalog,[?CATALOG_CONFIG_FILE,CatalogBinary],5000)||{_,Node}<-InstancesVm],
-
-    % Update app.config and send to service X
-    config:update_info(?APP_CONFIG_URL,?APP_CONFIG_DIR,?APP_CONFIG_FILE),
-    % Update node.config and send to service X
-
-    config:update_info(?NODE_CONFIG_URL,?NODE_CONFIG_DIR,?NODE_CONFIG_FILE),
-    ServiceList=dns:update(),
-    dns_service:update(ServiceList),
     timer:sleep(Interval),
     rpc:cast(node(),?MODULE,heart_beat,[Interval]).
 

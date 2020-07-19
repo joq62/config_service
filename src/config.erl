@@ -13,11 +13,20 @@
 -include("config.hrl").
 -include("log.hrl").
 %-compile(export_all).
--export([update_info/3]).
+-export([down_load_config/2,get_info/2,update_info/3]).
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
+
+down_load_config(GitUrl,Dir)->
+    os:cmd("rm -rf "++Dir),
+    os:cmd("git clone "++GitUrl),
+    timer:sleep(100),    
+    ok.
+get_info(Dir,FileName)->
+    {R,Info}=file:consult(filename:join(Dir,FileName)),
+    {R,Info}.    
 
 update_info(GitUrl,Dir,FileName)->
     os:cmd("rm -rf "++Dir),
