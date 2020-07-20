@@ -29,7 +29,8 @@
 
 
 
--export([update/1
+-export([update_info/0,
+	 get_info/1
 	]).
 
 -export([start/0,
@@ -56,13 +57,16 @@ start()-> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 stop()-> gen_server:call(?MODULE, {stop},infinity).
 
 
+get_info(WhichInfo)-> 
+    gen_server:call(?MODULE, {get_info,WhichInfo},infinity).
+
 ping()-> 
     gen_server:call(?MODULE, {ping},infinity).
 
 %%-----------------------------------------------------------------------
 
-update(ServiceList)->
-    gen_server:cast(?MODULE, {update,ServiceList}).
+update_info()->
+    gen_server:cast(?MODULE, {update_info}).
 
 heart_beat(Interval)->
     gen_server:cast(?MODULE, {heart_beat,Interval}).
@@ -83,7 +87,7 @@ heart_beat(Interval)->
 %% --------------------------------------------------------------------
 init([]) ->
     spawn(fun()->h_beat(?CONFIG_HEARTBEAT) end),
-    {ok, #state{service_list=[]}}.  
+    {ok, #state{}}.  
     
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
@@ -99,6 +103,19 @@ handle_call({ping},_From,State) ->
     Reply={pong,node(),?MODULE},
     {reply, Reply, State};
 
+handle_call({get_info,WhichInfo},_From,State) ->
+    Reply=case WhichInfo of
+	      node->
+		  State#state.node_info;
+	      catalog->
+		  State#state.catalog_info;
+	      app->
+		 State#state.app_info;
+	      Err->
+		  {error,[Err, ?MODULE,?LINE]}
+	  end,
+
+    {reply, Reply, State};
 
 %% App spec functions
 
@@ -123,7 +140,7 @@ handle_cast({heart_beat,Interval}, State) ->
     {noreply, State};
 
 handle_cast({update_info}, State) ->
-     NewNodeInfo=case rpc:call(node(),config,get_info,[?CONFIG_DIR,?NODECONFIG_FILE]) of
+     NewNodeInfo=case rpc:call(node(),config,get_info,[?CONFIG_DIR,?NODE_CONFIG_FILE]) of
 		    {ok,NodeInfo}->
 			NodeInfo;
 		    _->
@@ -191,8 +208,8 @@ code_change(_OldVsn, State, _Extra) ->
 %% --------------------------------------------------------------------
 h_beat(Interval)->
 
-    ok=down_load_config(?CONFIG_URL,?CONFIG_DIR),
-    ok=rpc:cast(node(),config_service,update_info,[]),
+    ok=config:down_load_config(?CONFIG_URL,?CONFIG_DIR),
+    true=rpc:cast(node(),config_service,update_info,[]),
     
     timer:sleep(Interval),
     rpc:cast(node(),?MODULE,heart_beat,[Interval]).

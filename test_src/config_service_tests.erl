@@ -39,7 +39,6 @@ cases_test()->
     ?debugMsg("dns test "),
     ?assertEqual(ok,config_test:start()),
 
-
     ?debugMsg("Start stop_test_system:start"),
     %% End application tests
     cleanup(),

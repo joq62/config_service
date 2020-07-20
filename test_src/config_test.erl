@@ -37,7 +37,22 @@ start()->
 %% -------------------------------------------------------------------
 
 basic_test()->
-%   ?assertEqual([{"kernel",dns_test@asus},{"stdlib",dns_test@asus}],dns_service:all()),
+    timer:sleep(3*1000),
+   ?assertEqual([{"vm_service",sthlm_1@asus},
+		 {"log_service",sthlm_1@asus}],
+		config_service:get_info(app)),
+    ?assertEqual([{"vm_service",git,"https://github.com/joq62/"},
+		  {"log_service",git,"https://github.com/joq62/"},
+		  {"orchistrate_service",git,"https://github.com/joq62/"},
+		  {"oam_service",git,"https://github.com/joq62/"},
+		  {"adder_service",git,"https://github.com/joqerlang/"},
+		  {"multi_service",git,"https://github.com/joqerlang/"},
+		  {"subtract_service",git,"https://github.com/joqerlang/"},
+		  {"divi_service",git,"https://github.com/joqerlang/"}],
+		 config_service:get_info(catalog)),    
+
+   ?assertEqual([{"sthlm_1",sthlm_1@asus},{"test_agent",test_agent@asus}],
+		config_service:get_info(node)),
     ok.
 
 
