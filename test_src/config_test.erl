@@ -40,7 +40,7 @@ basic_test()->
     timer:sleep(3*1000),
    ?assertEqual([{"vm_service",sthlm_1@asus},
 		 {"log_service",sthlm_1@asus}],
-		config_service:get_info(app)),
+		config_service:get_info(app_info)),
     ?assertEqual([{"vm_service",git,"https://github.com/joq62/"},
 		  {"log_service",git,"https://github.com/joq62/"},
 		  {"orchistrate_service",git,"https://github.com/joq62/"},
@@ -49,10 +49,10 @@ basic_test()->
 		  {"multi_service",git,"https://github.com/joqerlang/"},
 		  {"subtract_service",git,"https://github.com/joqerlang/"},
 		  {"divi_service",git,"https://github.com/joqerlang/"}],
-		 config_service:get_info(catalog)),    
+		 config_service:get_info(catalog_info)),    
 
    ?assertEqual([{"sthlm_1",sthlm_1@asus},{"test_agent",test_agent@asus}],
-		config_service:get_info(node)),
+		config_service:get_info(node_info)),
     ok.
 
 

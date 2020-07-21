@@ -105,11 +105,11 @@ handle_call({ping},_From,State) ->
 
 handle_call({get_info,WhichInfo},_From,State) ->
     Reply=case WhichInfo of
-	      node->
+	      node_info->
 		  State#state.node_info;
-	      catalog->
+	      catalog_info->
 		  State#state.catalog_info;
-	      app->
+	      app_info->
 		 State#state.app_info;
 	      Err->
 		  {error,[Err, ?MODULE,?LINE]}
