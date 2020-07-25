@@ -19,4 +19,4 @@ test:
 	cp src/*app ebin;
 	erlc -I include -o ebin src/*.erl;
 	erlc -o test_ebin test_src/*.erl;
-	erl -pa ebin -pa test_ebin -s config_service_tests start -sname config_test
+	erl -config test.config -pa ebin -pa test_ebin -s config_service_tests start -sname config_test

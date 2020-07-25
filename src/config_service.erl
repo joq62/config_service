@@ -10,9 +10,9 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--include("timeout.hrl").
+%-include("timeout.hrl").
 -include("log.hrl").
--include("config.hrl").
+%-include("config.hrl").
 %% --------------------------------------------------------------------
 
 
@@ -20,7 +20,9 @@
 %% Key Data structures
 %% 
 %% --------------------------------------------------------------------
--record(state,{app_info,node_info,catalog_info}).
+-record(state,{app_info,catalog_info,node_info,
+	       config_url,config_dir,
+	       catalog_file,app_file,node_file}).
 
 
 %% --------------------------------------------------------------------
@@ -86,8 +88,21 @@ heart_beat(Interval)->
 %
 %% --------------------------------------------------------------------
 init([]) ->
-    spawn(fun()->h_beat(?CONFIG_HEARTBEAT) end),
-    {ok, #state{}}.  
+    {ok,HbInterval}=application:get_env(hb_interval),
+    {ok,ConfigUrl}=application:get_env(config_url),
+    {ok,ConfigDir}=application:get_env(config_dir),
+
+    {ok,CatalogFile}=application:get_env(catalog_file),
+    {ok,AppFile}=application:get_env(app_file),
+    {ok,NodeFile}=application:get_env(node_file),
+    
+    spawn(fun()->h_beat(HbInterval,ConfigUrl,ConfigDir) end),
+    {ok, #state{config_url=ConfigUrl,
+	        config_dir=ConfigDir,
+	        catalog_file=CatalogFile,
+		app_file=AppFile,
+		node_file=NodeFile
+	       }}.  
     
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
@@ -136,29 +151,28 @@ handle_call(Request, From, State) ->
 %% -------------------------------------------------------------------
 handle_cast({heart_beat,Interval}, State) ->
     
-    spawn(fun()->h_beat(Interval) end),    
+    spawn(fun()->h_beat(Interval,State#state.config_url,State#state.config_dir) end),    
     {noreply, State};
 
 handle_cast({update_info}, State) ->
-     NewNodeInfo=case rpc:call(node(),config,get_info,[?CONFIG_DIR,?NODE_CONFIG_FILE]) of
+     NewNodeInfo=case rpc:call(node(),config,get_info,[State#state.config_dir,State#state.node_file]) of
 		    {ok,NodeInfo}->
 			NodeInfo;
 		    _->
 			State#state.node_info
 		end,
-     NewCatalogInfo=case rpc:call(node(),config,get_info,[?CONFIG_DIR,?CATALOG_CONFIG_FILE]) of
+     NewCatalogInfo=case rpc:call(node(),config,get_info,[State#state.config_dir,State#state.catalog_file]) of
 		    {ok,CatalogInfo}->
 			CatalogInfo;
 		    _->
 			State#state.catalog_info
 		end,
-     NewAppInfo=case rpc:call(node(),config,get_info,[?CONFIG_DIR,?APP_CONFIG_FILE]) of
+     NewAppInfo=case rpc:call(node(),config,get_info,[State#state.config_dir,State#state.app_file]) of
 		    {ok,AppInfo}->
 			AppInfo;
 		    _->
 			State#state.app_info
 		end,
-    
     NewState=State#state{node_info=NewNodeInfo,
 			 app_info=NewAppInfo,
 			 catalog_info=NewCatalogInfo},
@@ -206,9 +220,9 @@ code_change(_OldVsn, State, _Extra) ->
 %% Description:
 %% Returns: non
 %% --------------------------------------------------------------------
-h_beat(Interval)->
+h_beat(Interval,ConfigUrl,ConfigDir)->
 
-    ok=config:down_load_config(?CONFIG_URL,?CONFIG_DIR),
+    ok=config:down_load_config(ConfigUrl,ConfigDir),
     true=rpc:cast(node(),config_service,update_info,[]),
     
     timer:sleep(Interval),
