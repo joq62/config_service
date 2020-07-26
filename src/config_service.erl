@@ -21,7 +21,7 @@
 %% 
 %% --------------------------------------------------------------------
 -record(state,{app_info,catalog_info,node_info,
-	       config_url,config_dir,
+	       config_type,config_path,config_dir,
 	       catalog_file,app_file,node_file}).
 
 
@@ -89,15 +89,17 @@ heart_beat(Interval)->
 %% --------------------------------------------------------------------
 init([]) ->
     {ok,HbInterval}=application:get_env(hb_interval),
-    {ok,ConfigUrl}=application:get_env(config_url),
+    {ok,ConfigType}=application:get_env(config_type),
+    {ok,ConfigPath}=application:get_env(config_path),
     {ok,ConfigDir}=application:get_env(config_dir),
 
     {ok,CatalogFile}=application:get_env(catalog_file),
     {ok,AppFile}=application:get_env(app_file),
     {ok,NodeFile}=application:get_env(node_file),
     
-    spawn(fun()->h_beat(HbInterval,ConfigUrl,ConfigDir) end),
-    {ok, #state{config_url=ConfigUrl,
+    spawn(fun()->h_beat(HbInterval,ConfigType,ConfigPath,ConfigDir) end),
+    {ok, #state{config_type=ConfigType,
+		config_path=ConfigPath,
 	        config_dir=ConfigDir,
 	        catalog_file=CatalogFile,
 		app_file=AppFile,
@@ -151,7 +153,8 @@ handle_call(Request, From, State) ->
 %% -------------------------------------------------------------------
 handle_cast({heart_beat,Interval}, State) ->
     
-    spawn(fun()->h_beat(Interval,State#state.config_url,State#state.config_dir) end),    
+    spawn(fun()->h_beat(Interval,State#state.config_type,
+			State#state.config_path,State#state.config_dir) end),    
     {noreply, State};
 
 handle_cast({update_info}, State) ->
@@ -220,9 +223,9 @@ code_change(_OldVsn, State, _Extra) ->
 %% Description:
 %% Returns: non
 %% --------------------------------------------------------------------
-h_beat(Interval,ConfigUrl,ConfigDir)->
+h_beat(Interval,Type,ConfigPath,ConfigDir)->
 
-    ok=config:down_load_config(ConfigUrl,ConfigDir),
+    ok=config:down_load_config(Type,ConfigPath,ConfigDir),
     true=rpc:cast(node(),config_service,update_info,[]),
     
     timer:sleep(Interval),
