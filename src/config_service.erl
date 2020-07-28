@@ -98,7 +98,10 @@ init([]) ->
     {ok,NodeFile}=application:get_env(node_file),
     
     spawn(fun()->h_beat(HbInterval,ConfigType,ConfigPath,ConfigDir) end),
-    {ok, #state{config_type=ConfigType,
+    {ok, #state{app_info=[],
+		catalog_info=[],
+		node_info=[],
+		config_type=ConfigType,
 		config_path=ConfigPath,
 	        config_dir=ConfigDir,
 	        catalog_file=CatalogFile,
